@@ -14,12 +14,13 @@ Cmd::Cmd(QObject* parent)
 }
 
 void Cmd::halt() {
-    if (this->state() != QProcess::NotRunning) {
-        terminate();
-        waitForFinished(5000);
-        kill();
-        waitForFinished(1000);
+    if (this->state() == QProcess::NotRunning) {
+        return;
     }
+    terminate();
+    waitForFinished(5000);
+    kill();
+    waitForFinished(1000);
 }
 
 bool Cmd::run(const QString& cmd, bool quiet) {
@@ -41,14 +42,16 @@ bool Cmd::run(const QString& cmd, QString& output, bool quiet) {
     connect(this, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, &Cmd::finished, Qt::UniqueConnection);
     if (this->state() != QProcess::NotRunning) {
         std::vector<std::string> args_vec(size_t(this->arguments().size()));
-        for (size_t i = 0; i < args_vec.size(); ++i) {
+        for (std::size_t i = 0; i < args_vec.size(); ++i) {
             args_vec[i] = this->arguments()[int(i)].toStdString();
         }
         spdlog::debug("Process already running:{},{}", this->program().toStdString(), fmt::join(args_vec, ", "));
         return false;
     }
-    if (!quiet)
+    if (!quiet) {
         spdlog::debug("{}", cmd.toStdString().data());
+    }
+
     QEventLoop loop;
     connect(this, &Cmd::finished, &loop, &QEventLoop::quit);
     start("/bin/bash", QStringList() << "-c" << cmd);
