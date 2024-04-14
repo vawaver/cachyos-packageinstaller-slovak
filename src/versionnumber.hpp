@@ -70,9 +70,9 @@ Q_DECLARE_METATYPE(VersionNumber)
 // Custom formatter
 template <>
 struct fmt::formatter<VersionNumber> : public fmt::formatter<std::string_view> {
-    template <typename FormatCtx>
-    auto format(const VersionNumber& vernum, FormatCtx& ctx) const {
-        return fmt::formatter<std::string_view>::format(vernum.toStringView(), ctx);
+    template <typename FormatContext>
+    auto format(const VersionNumber& vernum, FormatContext& ctx) const {
+        return fmt::format_to(ctx.out(), "{}", vernum.toStringView());
     }
 };
 
