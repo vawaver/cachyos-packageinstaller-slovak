@@ -100,6 +100,23 @@ struct formatter<QStringList> {
 #endif
 
 namespace utils {
+
+/// @brief Make a split view from a string into multiple lines based on a delimiter.
+/// @param str The string to split.
+/// @param delim The delimiter to split the string.
+/// @return A range view representing the split lines.
+constexpr auto make_split_view(std::string_view str, char delim) noexcept {
+    constexpr auto functor = [](auto&& rng) {
+        return std::string_view(&*rng.begin(), static_cast<size_t>(ranges::distance(rng)));
+    };
+    constexpr auto second = [](auto&& rng) { return rng != ""; };
+
+    return str
+        | ranges::views::split(delim)
+        | ranges::views::transform(functor)
+        | ranges::views::filter(second);
+}
+
 auto make_multiline(const std::string_view& str, bool reverse, const std::string_view&& delim) noexcept -> std::vector<std::string>;
 
 auto make_multiline(const std::vector<std::string_view>& multiline, bool reverse, const std::string_view&& delim) noexcept -> std::string;
