@@ -52,13 +52,13 @@
 #include <algorithm>
 
 #include <QCoreApplication>
+#include <QFile>
 #include <QMenu>
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
-#include <QFile>
 
 #include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
@@ -245,7 +245,7 @@ void MainWindow::listSizeInstalledFP() {
 
 // Block interface while updating Flatpak list
 void MainWindow::blockInterfaceFP(bool block) {
-    for (int tab = 0; tab < 4; ++tab)
+    for (std::int32_t tab = 0; tab < 4; ++tab)
         m_ui->tabWidget->setTabEnabled(tab, !block);
 
     m_ui->comboRemote->setDisabled(block);
@@ -313,13 +313,14 @@ void MainWindow::updateBar() {
 }
 
 void MainWindow::checkUncheckItem() {
-    if (auto t_widget = qobject_cast<QTreeWidget*>(focusWidget())) {
-        if (t_widget->currentItem() == nullptr || t_widget->currentItem()->childCount() > 0)
-            return;
-        const int col  = (t_widget == m_ui->treePopularApps) ? static_cast<int>(PopCol::Check) : static_cast<int>(TreeCol::Check);
-        auto new_state = (t_widget->currentItem()->checkState(col)) ? Qt::Unchecked : Qt::Checked;
-        t_widget->currentItem()->setCheckState(col, new_state);
+    auto t_widget = qobject_cast<QTreeWidget*>(focusWidget());
+    if (!t_widget || t_widget->currentItem() == nullptr || t_widget->currentItem()->childCount() > 0) {
+        return;
     }
+
+    const auto col = (t_widget == m_ui->treePopularApps) ? static_cast<std::int32_t>(PopCol::Check) : static_cast<std::int32_t>(TreeCol::Check);
+    auto new_state = (t_widget->currentItem()->checkState(col)) ? Qt::Unchecked : Qt::Checked;
+    t_widget->currentItem()->setCheckState(col, new_state);
 }
 
 void MainWindow::outputAvailable(const QString& output) {
@@ -360,62 +361,63 @@ void MainWindow::loadTxtFiles() {
     ryml::Tree tree    = ryml::parse_in_arena(ryml::to_csubstr(src));
     ryml::NodeRef root = tree.rootref();  // get a reference to the root
 
-    const auto& get_node_key = [](auto&& node) {
-        std::string key{};
+    const auto& get_node_key = [](auto&& node) -> std::string {
         if (node.has_key() && !node.has_key_tag()) {
-            key = std::string{node.key().str, node.key().len};
+            return std::string{node.key().str, node.key().len};
         }
-        return key;
+        return {};
     };
 
     const auto& process_map = [this, &get_node_key](auto&& parent_category, auto&& node) {
-        for (const auto& map : node.children()) {
+        for (auto&& map : node.children()) {
             std::string category{};
-            for (const auto& map_child : map.children()) {
+            for (auto&& map_child : map.children()) {
                 if (map_child.has_val() && !map_child.has_val_tag()) {
                     category = std::string{map_child.val().str, map_child.val().len};
+                }
+                if (!map_child.is_container()) {
+                    continue;
                 }
 
                 const std::string key{get_node_key(map_child)};
 
-                if (map_child.is_container()) {
-                    std::vector<std::string> lines;
-                    lines.reserve(map_child.num_children());
-                    for (const auto& pkg_list : map_child.children()) {
-                        if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
-                            lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
-                        }
+                std::vector<std::string> lines;
+                lines.reserve(map_child.num_children());
+                for (const auto& pkg_list : map_child.children()) {
+                    if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
+                        lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
                     }
-                    for (const auto& line : lines) {
-                        processFile(parent_category, category, ::utils::make_multiline(line, ' '));
-                    }
+                }
+                for (const auto& line : lines) {
+                    processFile(parent_category, category, ::utils::make_multiline(line, ' '));
                 }
             }
         }
     };
-    for (const auto& map : root.children()) {
+    for (auto&& map : root.children()) {
         std::string category{};
-        for (const auto& map_child : map.children()) {
+        for (auto&& map_child : map.children()) {
             if (map_child.has_val() && !map_child.has_val_tag()) {
                 category = std::string{map_child.val().str, map_child.val().len};
+            }
+            if (!map_child.is_container()) {
+                continue;
             }
 
             const std::string key{get_node_key(map_child)};
 
-            if (map_child.is_container()) {
-                if (key == "subgroups") {
-                    process_map(category, map_child);
-                } else {
-                    std::vector<std::string> lines;
-                    lines.reserve(map_child.num_children());
-                    for (const auto& pkg_list : map_child.children()) {
-                        if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
-                            lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
-                        }
+            if (key == "subgroups") {
+                process_map(category, map_child);
+            } else {
+                std::vector<std::string> lines;
+                lines.reserve(map_child.num_children());
+                for (const auto& pkg_list : map_child.children()) {
+                    if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
+                        lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
                     }
-                    for (const auto& line : lines) {
-                        processFile(category, category, ::utils::make_multiline(line, ' '));
-                    }
+                }
+                for (const auto& line : lines) {
+                    processFile(category, category, ::utils::make_multiline(line, ' '));
                 }
             }
         }
@@ -777,9 +779,7 @@ void MainWindow::displayFlatpaks(bool force_update) {
 
     m_ui->labelNumAppFP->setText(QString::number(total_count));
 
-    int total = 0;
-    if (m_installed_apps_fp != QStringList(""))
-        total = m_installed_apps_fp.count();
+    const auto total = (m_installed_apps_fp != QStringList("")) ? m_installed_apps_fp.count() : 0;
 
     m_ui->labelNumInstFP->setText(QString::number(total));
 
@@ -862,7 +862,7 @@ bool MainWindow::confirmActions(const QString& names, const QString& action, boo
     if (m_tree == m_ui->treeFlatpak) {
         detailed_installed_names = m_change_list;
     } else {
-        const char delim     = (names.contains('\n')) ? '\n' : ' ';
+        const char delim      = (names.contains('\n')) ? '\n' : ' ';
         const auto& name_list = ::utils::make_multiline(names.toStdString(), delim);
         if (action == "install") {
             add_targets_to_install(m_handle, name_list);
