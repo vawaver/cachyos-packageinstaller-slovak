@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2023 Vladislav Nepogodin
+// Copyright (C) 2022-2024 Vladislav Nepogodin
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -95,40 +95,12 @@ struct formatter<QStringList> {
 #endif
 
 namespace utils {
-auto make_multiline(const std::string_view& str, bool reverse, const std::string_view&& delim) noexcept -> std::vector<std::string> {
-    static constexpr auto functor = [](auto&& rng) {
-        return std::string_view(&*rng.begin(), static_cast<size_t>(ranges::distance(rng)));
-    };
-    static constexpr auto second = [](auto&& rng) { return rng != ""; };
 
-#if defined(__clang__)
-    const auto& splitted_view = str
-        | ranges::views::split(delim);
-    const auto& view_res = splitted_view
-        | ranges::views::transform(functor);
-#else
-    auto view_res = str
-        | ranges::views::split(delim)
-        | ranges::views::transform(functor);
-#endif
-
-    std::vector<std::string> lines{};
-    ranges::for_each(view_res | ranges::views::filter(second), [&](auto&& rng) { lines.emplace_back(rng); });
-    if (reverse) {
-        ranges::reverse(lines);
-    }
-    return lines;
-}
-
-auto make_multiline(const std::vector<std::string_view>& multiline, bool reverse, const std::string_view&& delim) noexcept -> std::string {
+auto make_multiline(const std::vector<std::string_view>& multiline, const std::string_view&& delim) noexcept -> std::string {
     std::string res{};
     for (const auto& line : multiline) {
         res += line;
         res += delim.data();
-    }
-
-    if (reverse) {
-        ranges::reverse(res);
     }
 
     return res;

@@ -246,7 +246,7 @@ void parse_repos(alpm_handle_t* handle) noexcept {
                     continue;
                 }
                 // add CacheDir
-                const auto& archs = ::utils::make_multiline(it_nested.second, false, " ");
+                const auto& archs = ::utils::make_multiline(it_nested.second, ' ');
                 for (const auto& arch : archs) {
                     if (arch == "auto") {
                         struct utsname un;

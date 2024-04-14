@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2023 Vladislav Nepogodin
+// Copyright (C) 2022-2024 Vladislav Nepogodin
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@
 
 #include <range/v3/algorithm/all_of.hpp>
 #include <range/v3/algorithm/for_each.hpp>
-#include <range/v3/algorithm/reverse.hpp>
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/view/filter.hpp>
 #include <range/v3/view/split.hpp>
@@ -117,22 +116,27 @@ constexpr auto make_split_view(std::string_view str, char delim) noexcept {
         | ranges::views::filter(second);
 }
 
-auto make_multiline(const std::string_view& str, bool reverse, const std::string_view&& delim) noexcept -> std::vector<std::string>;
+/// @brief Split a string into multiple lines based on a delimiter.
+/// @param str The string to split.
+/// @param delim The delimiter to split the string.
+/// @return A vector of strings representing the split lines.
+[[nodiscard]] inline constexpr auto make_multiline(std::string_view str, char delim = '\n') noexcept -> std::vector<std::string> {
+    return [&]() constexpr {
+        std::vector<std::string> lines{};
+        ranges::for_each(utils::make_split_view(str, delim), [&](auto&& rng) { lines.emplace_back(rng); });
+        return lines;
+    }();
+}
 
-auto make_multiline(const std::vector<std::string_view>& multiline, bool reverse, const std::string_view&& delim) noexcept -> std::string;
+auto make_multiline(const std::vector<std::string_view>& multiline, const std::string_view&& delim) noexcept -> std::string;
 
 template <std::input_iterator I, std::sentinel_for<I> S>
-auto make_multiline_range(I first, S last, bool reverse, const std::string_view&& delim) noexcept -> std::string {
+auto make_multiline_range(I first, S last, const std::string_view&& delim) noexcept -> std::string {
     std::string res{};
     for (; first != last; ++first) {
         res += *first;
         res += delim.data();
     }
-
-    if (reverse) {
-        ::ranges::reverse(res);
-    }
-
     return res;
 }
 }  // namespace utils

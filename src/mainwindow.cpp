@@ -286,8 +286,8 @@ QString MainWindow::addSizes(const QString& arg1, const QString& arg2) {
     const auto& unit1   = arg1.simplified().section(" ", 1);
     const auto& unit2   = arg2.simplified().section(" ", 1);
 
-    // const auto& splitted_str1 = utils::make_multiline(arg1.simplified().toStdString(), false, " ");
-    // const auto& splitted_str2 = utils::make_multiline(arg2.simplified().toStdString(), false, " ");
+    // const auto& splitted_str1 = utils::make_multiline(arg1.simplified().toStdString(), ' ');
+    // const auto& splitted_str2 = utils::make_multiline(arg2.simplified().toStdString(), ' ');
     // const auto& number1 = splitted_str1[0].c_str();
     // const auto& number2 = splitted_str2[0].c_str();
     // const auto& unit1   = splitted_str1[1].c_str();
@@ -387,7 +387,7 @@ void MainWindow::loadTxtFiles() {
                         }
                     }
                     for (const auto& line : lines) {
-                        processFile(parent_category, category, ::utils::make_multiline(line, false, " "));
+                        processFile(parent_category, category, ::utils::make_multiline(line, ' '));
                     }
                 }
             }
@@ -414,7 +414,7 @@ void MainWindow::loadTxtFiles() {
                         }
                     }
                     for (const auto& line : lines) {
-                        processFile(category, category, ::utils::make_multiline(line, false, " "));
+                        processFile(category, category, ::utils::make_multiline(line, ' '));
                     }
                 }
             }
@@ -444,7 +444,7 @@ void MainWindow::processFile(const std::string& group, const std::string& catego
         }
     }
 
-    install_names   = fmt::format("{} {}", names[0], utils::make_multiline_range(names.begin() + 1, names.end(), false, " ")).c_str();
+    install_names   = QString::fromStdString(fmt::format("{} {}", names[0], utils::make_multiline_range(names.begin() + 1, names.end(), " ")));
     uninstall_names = install_names;
 
     list << QString::fromStdString(category) << QString::fromStdString(names[0])
@@ -862,8 +862,8 @@ bool MainWindow::confirmActions(const QString& names, const QString& action, boo
     if (m_tree == m_ui->treeFlatpak) {
         detailed_installed_names = m_change_list;
     } else {
-        const char* delim     = (names.contains("\n")) ? "\n" : " ";
-        const auto& name_list = ::utils::make_multiline(names.toStdString(), false, delim);
+        const char delim     = (names.contains('\n')) ? '\n' : ' ';
+        const auto& name_list = ::utils::make_multiline(names.toStdString(), delim);
         if (action == "install") {
             add_targets_to_install(m_handle, name_list);
         } else {
