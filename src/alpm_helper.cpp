@@ -183,8 +183,8 @@ void cb_log(void* ctx, alpm_loglevel_t level, const char* fmt, va_list args) {
     }
 }
 
-namespace utils {
 namespace {
+
 inline std::size_t replace_all(std::string& inout, const std::string_view& what, const std::string_view& with) {
     std::size_t count{};
     std::size_t pos{};
@@ -195,15 +195,10 @@ inline std::size_t replace_all(std::string& inout, const std::string_view& what,
     return count;
 }
 
-inline std::size_t remove_all(std::string& inout, const std::string_view& what) {
-    return replace_all(inout, what, "");
-}
-
 void parse_cachedirs(alpm_handle_t* handle) noexcept {
     static constexpr auto cachedir = "/var/cache/pacman/pkg/";
-
-    alpm_list_t* cachedirs = nullptr;
-    cachedirs              = alpm_list_add(cachedirs, const_cast<void*>(reinterpret_cast<const void*>(cachedir)));
+    alpm_list_t* cachedirs{nullptr};
+    cachedirs = alpm_list_add(cachedirs, const_cast<void*>(reinterpret_cast<const void*>(cachedir)));
     alpm_option_set_cachedirs(handle, cachedirs);
 }
 
@@ -274,10 +269,7 @@ void parse_repos(alpm_handle_t* handle) noexcept {
         }
     }
 }
-}  // namespace
-}  // namespace utils
 
-namespace {
 /* prepare a list of pkgs to display */
 std::string _display_targets(const std::vector<pm_target_t>& targets, bool verbose, std::string& status_text) {
     if (targets.empty()) {
@@ -312,7 +304,7 @@ std::string _display_targets(const std::vector<pm_target_t>& targets, bool verbo
             res += fmt::format("{}-{} [removal]", alpm_pkg_get_name(target.remove), alpm_pkg_get_version(target.remove));
         }
 
-        res += (verbose) ? "\n" : " ";
+        res += (verbose) ? '\n' : ' ';
     }
 
     // presentation
@@ -342,7 +334,7 @@ std::string _display_targets(const std::vector<pm_target_t>& targets, bool verbo
         status_text += fmt::format("Net Upgrade Size: {}\n", proper_present(isize - rsize));
     }
 
-    res += "\n";
+    res += '\n';
     return res;
 }
 
@@ -375,15 +367,17 @@ std::string display_targets(alpm_handle_t* handle, bool verbosepkglists, std::st
     for (alpm_list_t* i = alpm_trans_get_add(handle); i; i = alpm_list_next(i)) {
         auto* pkg = static_cast<alpm_pkg_t*>(i->data);
         pm_target_t targ;
-        targ.install = pkg;
-        targ.remove  = alpm_db_get_pkg(db_local, alpm_pkg_get_name(pkg));
+        targ.install     = pkg;
+        targ.is_explicit = false;
+        targ.remove      = alpm_db_get_pkg(db_local, alpm_pkg_get_name(pkg));
         targets.emplace_back(targ);
     }
     for (alpm_list_t* i = alpm_trans_get_remove(handle); i; i = alpm_list_next(i)) {
         auto* pkg = static_cast<alpm_pkg_t*>(i->data);
         pm_target_t targ;
-        targ.install = nullptr;
-        targ.remove  = pkg;
+        targ.install     = nullptr;
+        targ.is_explicit = false;
+        targ.remove      = pkg;
         // if(alpm_list_find(config->explicit_removes, pkg, pkg_cmp)) {
         //     targ->is_explicit = 1;
         // }
@@ -446,7 +440,8 @@ static void trans_init_error(alpm_handle_t* handle) {
         spdlog::error("error: could not lock database: {}", strerror(errno));
         if (access(lockfile, F_OK) == 0) {
             spdlog::error("\n  if you're sure a package manager is not already\n"
-                          "  running, you can remove {}", lockfile);
+                          "  running, you can remove {}",
+                lockfile);
         }
     }
 }
@@ -462,7 +457,7 @@ static int trans_release(alpm_handle_t* handle) {
 static alpm_db_t* get_db(alpm_handle_t* handle, const char* dbname) {
     for (alpm_list_t* i = alpm_get_syncdbs(handle); i; i = i->next) {
         auto* db = static_cast<alpm_db_t*>(i->data);
-        if (strcmp(alpm_db_get_name(db), dbname) == 0) {
+        if (std::string_view{alpm_db_get_name(db)} == std::string_view{dbname}) {
             return db;
         }
     }
@@ -608,8 +603,8 @@ static int trans_init(alpm_handle_t* handle, int flags) {
 }
 
 static void print_broken_dep(alpm_handle_t* handle, alpm_depmissing_t* miss) {
-    const std::string depstring = alpm_dep_compute_string(miss->depend);
-    alpm_list_t* trans_add      = alpm_trans_get_add(handle);
+    char* depstring        = alpm_dep_compute_string(miss->depend);
+    alpm_list_t* trans_add = alpm_trans_get_add(handle);
     alpm_pkg_t* pkg;
     if (miss->causingpkg == nullptr) {
         /* package being installed/upgraded has unresolved dependency */
@@ -624,10 +619,12 @@ static void print_broken_dep(alpm_handle_t* handle, alpm_depmissing_t* miss) {
         spdlog::warn("removing {} breaks dependency '{}' required by {}",
             miss->causingpkg, depstring, miss->target);
     }
+    free(depstring);
 }
 
 static int sync_prepare_execute(alpm_handle_t* handle, std::string& conflict_msg) {
-    alpm_list_t *packages, *data = nullptr;
+    alpm_list_t* packages = nullptr;
+    alpm_list_t* data     = nullptr;
     int retval{};
 
     /* Step 2: "compute" the transaction based on targets and flags */
@@ -637,7 +634,7 @@ static int sync_prepare_execute(alpm_handle_t* handle, std::string& conflict_msg
         switch (err) {
         case ALPM_ERR_PKG_INVALID_ARCH:
             for (alpm_list_t* i = data; i; i = alpm_list_next(i)) {
-                const std::string pkg = static_cast<char*>(i->data);
+                const std::string_view pkg = static_cast<char*>(i->data);
                 spdlog::info("package {} does not have a valid architecture", pkg);
             }
             break;
