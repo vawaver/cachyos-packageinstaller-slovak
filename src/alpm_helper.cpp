@@ -217,8 +217,8 @@ void parse_includes(alpm_handle_t* handle, alpm_db_t* db, const auto& section, c
         if (repo.starts_with("/")) {
             continue;
         }
-        utils::replace_all(repo, "$arch", arch);
-        utils::replace_all(repo, "$repo", section.c_str());
+        replace_all(repo, "$arch", arch);
+        replace_all(repo, "$repo", section.c_str());
         alpm_db_add_server(db, repo.c_str());
     }
 }
@@ -341,8 +341,8 @@ std::string _display_targets(const std::vector<pm_target_t>& targets, bool verbo
 }  // namespace
 
 void setup_alpm(alpm_handle_t* handle) {
-    utils::parse_repos(handle);
-    utils::parse_cachedirs(handle);
+    parse_repos(handle);
+    parse_cachedirs(handle);
 
     alpm_option_set_logcb(handle, cb_log, nullptr);
     alpm_option_set_progresscb(handle, cb_progress, nullptr);
