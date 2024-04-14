@@ -333,6 +333,54 @@ void MainWindow::outputAvailable(const QString& output) {
     m_ui->outputBox->verticalScrollBar()->setValue(m_ui->outputBox->verticalScrollBar()->maximum());
 }
 
+
+void processMap(MainWindow& window, const std::string& parent_category, ryml::NodeRef&& root_map, std::int32_t depth) noexcept {
+    // NOTE: there shouldn't be nested subgroups of depth more than 2.
+    // let's limit recursion to 2 depth in.
+    if (depth > 2) { return; }
+
+    const auto& get_node_key = [](auto&& node) -> std::string {
+        if (node.has_key() && !node.has_key_tag()) {
+            return std::string{node.key().str, node.key().len};
+        }
+        return {};
+    };
+    const auto& process_lines = [&window](auto&& parent_category, auto&& category, auto&& node) {
+        std::vector<std::string> lines;
+        lines.reserve(node.num_children());
+        for (const auto& pkg_list : node.children()) {
+            if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
+                lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
+            }
+        }
+        for (const auto& line : lines) {
+            window.processFile(parent_category, category, ::utils::make_multiline(line, ' '));
+        }
+    };
+
+    for (auto&& map : root_map.children()) {
+        std::string category{};
+        for (auto&& map_child : map.children()) {
+            if (map_child.has_val() && !map_child.has_val_tag()) {
+                category = std::string{map_child.val().str, map_child.val().len};
+            }
+            if (!map_child.is_container()) {
+                continue;
+            }
+
+            const auto& key{get_node_key(map_child)};
+            if (key == "subgroups") {
+                processMap(window, category, std::move(map_child), depth + 1);
+            } else {
+                // if we have a depth less than 1, then there is no parent.
+                // which means parent category is equal to empty string.
+                auto& cond_par_cat = (depth > 1) ? parent_category : category;
+                process_lines(cond_par_cat, category, std::move(map_child));
+            }
+        }
+    }
+}
+
 // Load info from the .txt files
 void MainWindow::loadTxtFiles() {
     spdlog::debug("+++ {} +++", __PRETTY_FUNCTION__);
@@ -361,67 +409,7 @@ void MainWindow::loadTxtFiles() {
     ryml::Tree tree    = ryml::parse_in_arena(ryml::to_csubstr(src));
     ryml::NodeRef root = tree.rootref();  // get a reference to the root
 
-    const auto& get_node_key = [](auto&& node) -> std::string {
-        if (node.has_key() && !node.has_key_tag()) {
-            return std::string{node.key().str, node.key().len};
-        }
-        return {};
-    };
-
-    const auto& process_map = [this, &get_node_key](auto&& parent_category, auto&& node) {
-        for (auto&& map : node.children()) {
-            std::string category{};
-            for (auto&& map_child : map.children()) {
-                if (map_child.has_val() && !map_child.has_val_tag()) {
-                    category = std::string{map_child.val().str, map_child.val().len};
-                }
-                if (!map_child.is_container()) {
-                    continue;
-                }
-
-                const std::string key{get_node_key(map_child)};
-
-                std::vector<std::string> lines;
-                lines.reserve(map_child.num_children());
-                for (const auto& pkg_list : map_child.children()) {
-                    if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
-                        lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
-                    }
-                }
-                for (const auto& line : lines) {
-                    processFile(parent_category, category, ::utils::make_multiline(line, ' '));
-                }
-            }
-        }
-    };
-    for (auto&& map : root.children()) {
-        std::string category{};
-        for (auto&& map_child : map.children()) {
-            if (map_child.has_val() && !map_child.has_val_tag()) {
-                category = std::string{map_child.val().str, map_child.val().len};
-            }
-            if (!map_child.is_container()) {
-                continue;
-            }
-
-            const std::string key{get_node_key(map_child)};
-
-            if (key == "subgroups") {
-                process_map(category, map_child);
-            } else {
-                std::vector<std::string> lines;
-                lines.reserve(map_child.num_children());
-                for (const auto& pkg_list : map_child.children()) {
-                    if (pkg_list.has_val() && !pkg_list.has_val_tag()) {
-                        lines.emplace_back(std::string{pkg_list.val().str, pkg_list.val().len});
-                    }
-                }
-                for (const auto& line : lines) {
-                    processFile(category, category, ::utils::make_multiline(line, ' '));
-                }
-            }
-        }
-    }
+    processMap(*this, {}, std::move(root), 1);
 
     file.close();
 }
