@@ -5,5 +5,6 @@
         <file alias="de">lang/cachyos-packageinstaller_de.qm</file>
         <file alias="pl">lang/cachyos-packageinstaller_pl.qm</file>
         <file alias="ru">lang/cachyos-packageinstaller_ru.qm</file>
+        <file alias="sk">lang/cachyos-packageinstaller_sk.qm</file>
     </qresource>
 </RCC>
