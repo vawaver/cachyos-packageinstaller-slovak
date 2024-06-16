@@ -672,7 +672,7 @@ Ujistite se, že důkladne zkontrolujete seznam balíčků, které mají být od
     <message>
         <location filename="../src/remotes.cpp" line="89"/>
         <source>Flathub is the main Flatpak remote and won&apos;t be removed</source>
-        <translation>Flathub je hlavní vzdálené uložiště Flatpak a nebude odstraněné/translation>
+        <translation>Flathub je hlavní vzdálené uložiště Flatpak a nebude odstraněné</translation>
     </message>
     <message>
         <location filename="../src/remotes.cpp" line="104"/>
