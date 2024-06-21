@@ -388,7 +388,7 @@ std::string display_targets(alpm_handle_t* handle, bool verbosepkglists, std::st
 
 void add_targets_to_install(alpm_handle_t* handle, const std::vector<std::string>& vec) {
     /* Step 0: create a new transaction */
-    if (alpm_trans_init(handle, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT) != 0) {
+    if (alpm_trans_init(handle, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT | ALPM_TRANS_FLAG_NOLOCK) != 0) {
         spdlog::error("failed to create a new transaction ({})\n", alpm_strerror(alpm_errno(handle)));
         alpm_trans_release(handle);
         return;
@@ -413,7 +413,7 @@ void add_targets_to_install(alpm_handle_t* handle, const std::vector<std::string
 
 void add_targets_to_remove(alpm_handle_t* handle, const std::vector<std::string>& vec) {
     /* Step 0: create a new transaction */
-    if (alpm_trans_init(handle, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT) != 0) {
+    if (alpm_trans_init(handle, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT | ALPM_TRANS_FLAG_NOLOCK) != 0) {
         spdlog::error("failed to create a new transaction ({})\n", alpm_strerror(alpm_errno(handle)));
         alpm_trans_release(handle);
         return;

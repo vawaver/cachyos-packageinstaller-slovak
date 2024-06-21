@@ -136,7 +136,7 @@ class MainWindow : public QDialog {
     void ifDownloadFailed();
     void listFlatpakRemotes();
     void listSizeInstalledFP();
-    void loadTxtFiles();
+    void fetch_net_pkglist() noexcept;
     void processFile(const std::string& group, const std::string& category, const std::vector<std::string>& names);
     void refreshPopularApps();
     void removeDuplicatesFP();

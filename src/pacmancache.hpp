@@ -31,10 +31,8 @@ class PacmanCache {
 
     void refresh_list();
 
-    [[nodiscard]] const std::map<QString, QStringList>& get_candidates() const
-    { return m_candidates; }
-    [[nodiscard]] const QStringList& get_upgrade_candidates() const
-    { return m_upd_candidates; }
+    [[nodiscard]] const std::map<QString, QStringList>& get_candidates() const { return m_candidates; }
+    [[nodiscard]] const QStringList& get_upgrade_candidates() const { return m_upd_candidates; }
 
     static QStringView getArch();
 

@@ -53,6 +53,7 @@
 #include <QLocale>
 #include <QMessageBox>
 #include <QSharedMemory>
+#include <QStandardPaths>
 #include <QTranslator>
 
 #include <spdlog/async.h>                  // for create_async
@@ -134,9 +135,9 @@ int main(int argc, char* argv[]) {
 #endif
 
     /// 2. Application identification
-    QApplication::setOrganizationName("CachyOS");
+    QApplication::setOrganizationName("cachyos");
     QApplication::setOrganizationDomain("cachyos.org");
-    QApplication::setApplicationName("CachyOS-PI");
+    QApplication::setApplicationName("cachyos-pi");
 
     // Set application attributes
     QApplication app(argc, argv);
@@ -181,10 +182,10 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    if (getuid() != 0) {
+    if (getuid() == 0) {
         QApplication::beep();
         QMessageBox::critical(nullptr, QObject::tr("Unable to run the app"),
-            QObject::tr("Please run that application as root user!"));
+            QObject::tr("Please don't run that application as root user!"));
         return EXIT_FAILURE;
     }
 
@@ -198,17 +199,18 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    static constexpr auto log_name = "/var/log/cachyospi.log";
-    if (fs::exists(log_name)) {
-        std::ifstream currentfile{log_name};
+    const auto& cache_path   = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    const auto& log_filepath = fmt::format("{}/cachyospi.log", cache_path.toStdString());
+    if (fs::exists(log_filepath)) {
+        std::ifstream currentfile{log_filepath};
         std::string file_data{std::istreambuf_iterator<char>(currentfile), std::istreambuf_iterator<char>()};
-        std::ofstream oldlogfile{fmt::format("{}.old", log_name)};
+        std::ofstream oldlogfile{fmt::format("{}.old", log_filepath)};
         oldlogfile << "-----------------------------------------------------------\nCACHYOSPI SESSION\n"
                       "-----------------------------------------------------------\n";
         oldlogfile << file_data;
-        fs::remove(log_name);
+        fs::remove(log_filepath);
     }
-    auto logger = spdlog::create_async<spdlog::sinks::basic_file_sink_mt>("cachyos_logger", log_name);
+    auto logger = spdlog::create_async<spdlog::sinks::basic_file_sink_mt>("cachyos_logger", log_filepath);
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("[%r][%^---%L---%$] %v");
     spdlog::set_level(spdlog::level::debug);

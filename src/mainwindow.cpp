@@ -59,6 +59,7 @@
 #include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QStandardPaths>
 
 #include <fmt/ranges.h>
 #include <spdlog/spdlog.h>
@@ -124,7 +125,7 @@ void MainWindow::setup() {
     const QString icon      = "software-update-available-symbolic";
     const QIcon backup_icon = QIcon(":/icons/software-update-available.png");
     m_ui->icon->setIcon(QIcon::fromTheme(icon, backup_icon));
-    loadTxtFiles();
+    fetch_net_pkglist();
     refreshPopularApps();
 
     // connect search boxes
@@ -187,14 +188,15 @@ bool MainWindow::uninstall(const QString& names) {
     m_ui->tabWidget->setTabText(m_ui->tabWidget->indexOf(m_ui->tabOutput), tr("Uninstalling packages..."));
     displayOutput();
 
-    bool success = false;
-    if (is_ok) {
-        success = m_cmd.run(fmt::format("pacman -R --noconfirm {}", names.toStdString()).c_str());
-    } else {
-        success = m_cmd.run(fmt::format("yes | pacman -R {}", names.toStdString()).c_str());
-    }
+    bool success        = false;
+    const auto& cmd_str = [&is_ok, names = std::move(names.toStdString())]() -> std::string {
+        if (is_ok) {
+            return fmt::format("pkexec pacman -R --noconfirm {}", std::move(names));
+        }
+        return fmt::format("pkexec pacman -R {}", std::move(names));
+    }();
 
-    return success;
+    return m_cmd.run(cmd_str.c_str());
 }
 
 // convert number, unit to bytes
@@ -218,8 +220,8 @@ void MainWindow::listSizeInstalledFP() {
     QString total = "0 bytes";
     QStringList list, runtimes;
     if (m_fp_ver < VersionNumber("1.0.1")) {  // older version doesn't display all apps and runtimes without specifying them
-        list     = m_cmd.getCmdOut("runuser -s /bin/bash -l $(logname) -c \"flatpak -d list --app " + m_user + "|tr -s ' ' |cut -f1,5,6 -d' '\"").split("\n");
-        runtimes = m_cmd.getCmdOut("runuser -s /bin/bash -l $(logname) -c \"flatpak -d list --runtime " + m_user + "|tr -s ' '|cut -f1,5,6 -d' '\"").split("\n");
+        list     = m_cmd.getCmdOut(QStringLiteral("pkexec --user $(logname) /bin/bash -c \"flatpak -d list --app ") + m_user + "|tr -s ' ' |cut -f1,5,6 -d' '\"").split("\n");
+        runtimes = m_cmd.getCmdOut(QStringLiteral("pkexec --user $(logname) /bin/bash -c \"flatpak -d list --runtime ") + m_user + "|tr -s ' '|cut -f1,5,6 -d' '\"").split("\n");
         if (!runtimes.isEmpty())
             list << runtimes;
         for (QTreeWidgetItemIterator it(m_ui->treeFlatpak); *it; ++it) {
@@ -233,9 +235,9 @@ void MainWindow::listSizeInstalledFP() {
             }
         }
     } else if (m_fp_ver < VersionNumber("1.2.4"))
-        list = m_cmd.getCmdOut("runuser -s /bin/bash -l $(logname) -c \"flatpak -d list " + m_user + "|tr -s ' '|cut -f1,5\"").split("\n");
+        list = m_cmd.getCmdOut(QStringLiteral("pkexec --user $(logname) /bin/bash -c \"flatpak -d list ") + m_user + "|tr -s ' '|cut -f1,5\"").split("\n");
     else
-        list = m_cmd.getCmdOut("runuser -s /bin/bash -l $(logname) -c \"flatpak list " + m_user + "--columns app,size\"").split("\n");
+        list = m_cmd.getCmdOut(QStringLiteral("pkexec --user $(logname) /bin/bash -c \"flatpak list ") + m_user + "--columns app,size\"").split("\n");
 
     for (const QString& item : list)
         total = addSizes(total, item.section("\t", 1));
@@ -333,11 +335,12 @@ void MainWindow::outputAvailable(const QString& output) {
     m_ui->outputBox->verticalScrollBar()->setValue(m_ui->outputBox->verticalScrollBar()->maximum());
 }
 
-
 void processMap(MainWindow& window, const std::string& parent_category, ryml::NodeRef&& root_map, std::int32_t depth) noexcept {
     // NOTE: there shouldn't be nested subgroups of depth more than 2.
     // let's limit recursion to 2 depth in.
-    if (depth > 2) { return; }
+    if (depth > 2) {
+        return;
+    }
 
     const auto& get_node_key = [](auto&& node) -> std::string {
         if (node.has_key() && !node.has_key_tag()) {
@@ -381,26 +384,39 @@ void processMap(MainWindow& window, const std::string& parent_category, ryml::No
     }
 }
 
-// Load info from the .txt files
-void MainWindow::loadTxtFiles() {
+// Load data from Github repo
+void MainWindow::fetch_net_pkglist() noexcept {
     spdlog::debug("+++ {} +++", __PRETTY_FUNCTION__);
-    const auto& file_url      = cpr::Url{"https://raw.githubusercontent.com/cachyos/packageinstaller/develop/pkglist.yaml"};
-    const auto& fetch_timeout = cpr::Timeout{100 * 1000};  // 100s
-    cpr::Response r           = cpr::Get(file_url, fetch_timeout,
-                  cpr::ProgressCallback([&]([[maybe_unused]] auto&& downloadTotal, [[maybe_unused]] auto&& downloadNow, [[maybe_unused]] auto&& uploadTotal,
-                                  [[maybe_unused]] auto&& uploadNow, [[maybe_unused]] auto&& userdata) -> bool { return true; }));
 
-    if (r.error.code == cpr::ErrorCode::OK) {
-        std::ofstream pkglistyaml{"/usr/lib/cachyos-pi/pkglist.yaml"};
-        pkglistyaml << r.text;
-    } else if (r.error.code == cpr::ErrorCode::OPERATION_TIMEDOUT) {
-        spdlog::error("Unable to fetch pkglist. Timeout");
+    const auto& fetch_filepath = [this]() -> QString {
+        const auto& file_url      = cpr::Url{"https://raw.githubusercontent.com/cachyos/packageinstaller/develop/pkglist.yaml"};
+        const auto& fetch_timeout = cpr::Timeout{100 * 1000};  // 100s
+        cpr::Response r           = cpr::Get(file_url, fetch_timeout,
+                      cpr::ProgressCallback([&]([[maybe_unused]] auto&& downloadTotal, [[maybe_unused]] auto&& downloadNow, [[maybe_unused]] auto&& uploadTotal,
+                                      [[maybe_unused]] auto&& uploadNow, [[maybe_unused]] auto&& userdata) -> bool { return true; }));
 
-        QMessageBox::warning(this, "CachyOS Package Installer", tr("Unable to fetch pkglist. Timeout!"));
-        return;
-    }
+        if (r.error.code == cpr::ErrorCode::OK) {
+            const auto& config_path = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation).toStdString();
+            auto pkglist_path       = fmt::format("{}/pkglist.yaml", config_path);
+            if (!fs::exists(config_path)) {
+                std::error_code err{};
+                fs::create_directories(config_path, err);
+                if (err) {
+                    spdlog::error("failed to create directories: {}", err.message());
+                }
+            }
 
-    QFile file("/usr/lib/cachyos-pi/pkglist.yaml");
+            std::ofstream pkglistyaml{pkglist_path};
+            pkglistyaml << r.text;
+            return QString::fromStdString(std::move(pkglist_path));
+        } else if (r.error.code == cpr::ErrorCode::OPERATION_TIMEDOUT) {
+            spdlog::error("Unable to fetch pkglist. Timeout");
+            QMessageBox::warning(this, "CachyOS Package Installer", tr("Unable to fetch pkglist. Timeout!"));
+        }
+        return QString("/usr/lib/cachyos-pi/pkglist.yaml");
+    }();
+
+    QFile file(fetch_filepath);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         spdlog::error("Could not open: {}", file.fileName().toStdString());
         return;
@@ -823,7 +839,7 @@ void MainWindow::listFlatpakRemotes() {
     spdlog::debug("+++ {} +++", __PRETTY_FUNCTION__);
     m_ui->comboRemote->blockSignals(true);
     m_ui->comboRemote->clear();
-    QStringList list = m_cmd.getCmdOut("runuser -s /bin/bash -l $(logname) -c \"flatpak remote-list " + m_user + "| cut -f1\"").remove(" ").split("\n");
+    QStringList list = m_cmd.getCmdOut("pkexec --user $(logname) /bin/bash -c \"flatpak remote-list " + m_user + "| cut -f1\"").remove(" ").split("\n");
     m_ui->comboRemote->addItems(list);
     // set flathub default
     m_ui->comboRemote->setCurrentIndex(m_ui->comboRemote->findText("flathub"));
@@ -863,7 +879,7 @@ bool MainWindow::confirmActions(const QString& names, const QString& action, boo
 
         if (action == "install") {
             refresh_alpm(&m_handle, &m_alpm_err);
-            is_ok = (sync_trans(m_handle, name_list, 0, msg_ok_status) == 0);
+            is_ok = (sync_trans(m_handle, name_list, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT | ALPM_TRANS_FLAG_NOLOCK, msg_ok_status) == 0);
         }
     }
 
@@ -941,7 +957,9 @@ bool MainWindow::install(const QString& names) {
         return true;
 
     displayOutput();
-    return m_cmd.run(fmt::format("pacman -S {}", names.toStdString()).c_str());
+
+    const auto& cmd_str = QStringLiteral("pkexec pacman -S ") + names;
+    return m_cmd.run(cmd_str);
 }
 
 // install a list of application and run postprocess for each of them.
@@ -1204,24 +1222,24 @@ QStringList MainWindow::listFlatpaks(const QString& remote, const QString& type)
     disconnect(m_conn);
     if (m_fp_ver < VersionNumber("1.0.1")) {
         // list packages, strip first part remote/ or app/ no size for old flatpak
-        success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"set -o pipefail; flatpak -d remote-ls " + m_user
+        success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"set -o pipefail; flatpak -d remote-ls " + m_user
                 + remote + " " + arch_fp + type + R"( 2>/dev/null| cut -f1 | tr -s ' ' | cut -f1 -d' '|sed 's/^[^\/]*\///g' ")",
             out);
         list    = out.split("\n");
     } else if (m_fp_ver < VersionNumber("1.2.4")) {  // lower than Buster version
         // list size too
-        success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"set -o pipefail; flatpak -d remote-ls " + m_user
+        success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"set -o pipefail; flatpak -d remote-ls " + m_user
                 + remote + " " + arch_fp + type + R"( 2>/dev/null| cut -f1,3 |tr -s ' ' | sed 's/^[^\/]*\///g' ")",
             out);
         list    = out.split("\n");
     } else {  // Buster version and above
         if (!updated) {
-            success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"flatpak update --appstream\"");
+            success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"flatpak update --appstream\"");
             updated = true;
         }
         // list version too
         if (type == "--app" || type.isEmpty()) {
-            success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"set -o pipefail; flatpak remote-ls " + m_user
+            success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"set -o pipefail; flatpak remote-ls " + m_user
                     + remote + " " + arch_fp + " --app --columns=ver,ref,installed-size 2>/dev/null\"",
                 out);
             list    = out.split("\n");
@@ -1229,7 +1247,7 @@ QStringList MainWindow::listFlatpaks(const QString& remote, const QString& type)
                 list = QStringList();
         }
         if (type == "--runtime" || type.isEmpty()) {
-            success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"set -o pipefail; flatpak remote-ls " + m_user
+            success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"set -o pipefail; flatpak remote-ls " + m_user
                     + remote + " " + arch_fp + " --runtime --columns=branch,ref,installed-size 2>/dev/null\"",
                 out);
             list += out.split("\n");
@@ -1251,9 +1269,9 @@ QStringList MainWindow::listInstalledFlatpaks(const std::string_view& type) {
     QStringList list;
     std::string flatpak_cmd;
     if (m_fp_ver < VersionNumber("1.2.4")) {
-        flatpak_cmd = fmt::format("runuser -s /bin/bash -l $(logname) -c \"flatpak -d list {} {} 2>/dev/null |cut -f1|cut -f1 -d' '\"", m_user.toStdString(), type);
+        flatpak_cmd = fmt::format("pkexec --user $(logname) /bin/bash -c \"flatpak -d list {} {} 2>/dev/null |cut -f1|cut -f1 -d' '\"", m_user.toStdString(), type);
     } else {
-        flatpak_cmd = fmt::format("runuser -s /bin/bash -l $(logname) -c \"flatpak list {} {} --columns=ref 2>/dev/null\"", m_user.toStdString(), type);
+        flatpak_cmd = fmt::format("pkexec --user $(logname) /bin/bash -c \"flatpak list {} {} --columns=ref 2>/dev/null\"", m_user.toStdString(), type);
     }
     list << m_cmd.getCmdOut(flatpak_cmd.c_str())
                 .remove(" ")
@@ -1478,7 +1496,7 @@ void MainWindow::on_pushInstall_clicked() {
         }
         setCursor(QCursor(Qt::BusyCursor));
         displayOutput();
-        if (m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"socat SYSTEM:'flatpak install -y " + m_user
+        if (m_cmd.run("pkexec --user $(logname) /bin/bash -c \"socat SYSTEM:'flatpak install -y " + m_user
                 + m_ui->comboRemote->currentText() + " " + m_change_list.join(" ") + "',stderr STDIO\"")) {
             displayFlatpaks(true);
             m_indexFilterFP.clear();
@@ -1577,7 +1595,7 @@ void MainWindow::on_pushUninstall_clicked() {
         setCursor(QCursor(Qt::BusyCursor));
         for (const QString& app : m_change_list) {
             displayOutput();
-            if (!m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"socat SYSTEM:'flatpak uninstall " + conf
+            if (!m_cmd.run("pkexec --user $(logname) /bin/bash -c \"socat SYSTEM:'flatpak uninstall " + conf
                     + app + "',stderr STDIO\""))  // success if all processed successfully, failure if one failed
                 success = false;
         }
@@ -1656,6 +1674,8 @@ void MainWindow::on_tabWidget_currentChanged(int index) {
         break;
     case Tab::Repo:
         m_ui->searchBoxRepo->setText(search_str);
+
+        // TODO(vnepogodin): here should be just native pacman check on output if we have any orphans
         m_ui->pushRemoveOrphan->setVisible(system("test -n \"$(pacman -Qtdq)\"") == 0);
         enableTabs(true);
         setCurrentTree();
@@ -1704,7 +1724,7 @@ void MainWindow::on_tabWidget_currentChanged(int index) {
                 }
             }
             displayOutput();
-            success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo\"");
+            success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo\"");
             if (!success) {
                 QMessageBox::critical(this, tr("Flathub remote failed"), tr("Flathub remote could not be added"));
                 m_ui->tabWidget->setCurrentIndex(Tab::Popular);
@@ -1723,7 +1743,7 @@ void MainWindow::on_tabWidget_currentChanged(int index) {
         }
         setCursor(QCursor(Qt::BusyCursor));
         displayOutput();
-        success = m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo\"");
+        success = m_cmd.run("pkexec --user $(logname) /bin/bash -c \"flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo\"");
         if (!success) {
             QMessageBox::critical(this, tr("Flathub remote failed"), tr("Flathub remote could not be added"));
             m_ui->tabWidget->setCurrentIndex(Tab::Popular);
@@ -1974,7 +1994,7 @@ void MainWindow::on_pushUpgradeFP_clicked() {
     showOutput();
     setCursor(QCursor(Qt::BusyCursor));
     displayOutput();
-    if (m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"socat SYSTEM:'flatpak update " + m_user.trimmed() + "',pty STDIO\"")) {
+    if (m_cmd.run("pkexec --user $(logname) /bin/bash -c \"socat SYSTEM:'flatpak update " + m_user.trimmed() + "',pty STDIO\"")) {
         displayFlatpaks(true);
         setCursor(QCursor(Qt::ArrowCursor));
         QMessageBox::information(this, tr("Done"), tr("Processing finished successfully."));
@@ -1999,7 +2019,7 @@ void MainWindow::on_pushRemotes_clicked() {
         showOutput();
         setCursor(QCursor(Qt::BusyCursor));
         displayOutput();
-        if (m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"socat SYSTEM:'flatpak install -y " + dialog->getUser() + "--from " + dialog->getInstallRef().replace(":", "\\:") + "',stderr STDIO\"")) {
+        if (m_cmd.run("pkexec --user $(logname) /bin/bash -c \"socat SYSTEM:'flatpak install -y " + dialog->getUser() + "--from " + dialog->getInstallRef().replace(":", "\\:") + "',stderr STDIO\"")) {
             listFlatpakRemotes();
             displayFlatpaks(true);
             setCursor(QCursor(Qt::ArrowCursor));
@@ -2024,10 +2044,10 @@ void MainWindow::on_comboUser_activated(int index) {
         if (!updated) {
             setCursor(QCursor(Qt::BusyCursor));
             displayOutput();
-            m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo\"");
+            m_cmd.run("pkexec --user $(logname) /bin/bash -c \"flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo\"");
             if (m_fp_ver >= VersionNumber("1.2.4")) {
                 displayOutput();
-                m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"flatpak update --appstream\"");
+                m_cmd.run("pkexec --user $(logname) /bin/bash -c \"flatpak update --appstream\"");
             }
             setCursor(QCursor(Qt::ArrowCursor));
             updated = true;
@@ -2095,7 +2115,7 @@ void MainWindow::on_pushRemoveUnused_clicked() {
     QString conf = "-y ";
     if (m_fp_ver < VersionNumber("1.0.1"))
         conf = QString();
-    if (m_cmd.run("runuser -s /bin/bash -l $(logname) -c \"socat SYSTEM:'flatpak uninstall --unused " + conf + m_user + "',pty STDIO\"")) {
+    if (m_cmd.run("pkexec --user $(logname) /bin/bash -l  -c \"socat SYSTEM:'flatpak uninstall --unused " + conf + m_user + "',pty STDIO\"")) {
         displayFlatpaks(true);
         setCursor(QCursor(Qt::ArrowCursor));
         QMessageBox::information(this, tr("Done"), tr("Processing finished successfully."));
