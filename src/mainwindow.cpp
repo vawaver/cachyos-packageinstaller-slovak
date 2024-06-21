@@ -73,7 +73,7 @@ MainWindow::MainWindow(QWidget* parent) : QDialog(parent),
     m_ui->setupUi(this);
     setProgressDialog();
 
-    setup_alpm(m_handle);
+    alpm::setup_alpm(m_handle);
 
     connect(&m_timer, &QTimer::timeout, this, &MainWindow::updateBar);
     connect(&m_cmd, &Cmd::started, this, &MainWindow::cmdStart);
@@ -89,7 +89,7 @@ MainWindow::MainWindow(QWidget* parent) : QDialog(parent),
 }
 
 MainWindow::~MainWindow() {
-    destroy_alpm(m_handle);
+    alpm::destroy_alpm(m_handle);
     delete m_ui;
 }
 
@@ -438,7 +438,7 @@ void MainWindow::processFile(const std::string& group, const std::string& catego
     QString install_names;
     QString uninstall_names;
 
-    if (auto pkg = get_package_view(m_handle, names[0].c_str())) {
+    if (auto pkg = alpm::get_package_view(m_handle, names[0].c_str())) {
         description = QString(pkg->desc.data());
     }
 
@@ -861,17 +861,17 @@ bool MainWindow::confirmActions(const QString& names, const QString& action, boo
         const char delim      = (names.contains('\n')) ? '\n' : ' ';
         const auto& name_list = ::utils::make_multiline(names.toStdString(), delim);
         if (action == "install") {
-            add_targets_to_install(m_handle, name_list);
+            alpm::add_targets_to_install(m_handle, name_list);
         } else {
             is_ok = true;
-            add_targets_to_remove(m_handle, name_list);
+            alpm::add_targets_to_remove(m_handle, name_list);
         }
-        detailed_names = display_targets(m_handle, true, summary).c_str();
+        detailed_names = alpm::display_targets(m_handle, true, summary).c_str();
         alpm_trans_release(m_handle);
 
         if (action == "install") {
-            refresh_alpm(&m_handle, &m_alpm_err);
-            is_ok = (sync_trans(m_handle, name_list, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT | ALPM_TRANS_FLAG_NOLOCK, msg_ok_status) == 0);
+            alpm::refresh_alpm(&m_handle, m_alpm_err);
+            is_ok = (alpm::sync_trans(m_handle, name_list, ALPM_TRANS_FLAG_ALLDEPS | ALPM_TRANS_FLAG_ALLEXPLICIT | ALPM_TRANS_FLAG_NOLOCK, msg_ok_status) == 0);
         }
     }
 
@@ -1150,7 +1150,7 @@ void MainWindow::cleanup() {
 
 // Get version of the package
 auto MainWindow::get_package_version(std::string_view name) noexcept -> std::string {
-    if (auto pkg = get_package_view(m_handle, name)) {
+    if (auto pkg = alpm::get_package_view(m_handle, name)) {
         return std::string{pkg->pkgver};
     }
     return {};
@@ -1914,7 +1914,7 @@ void MainWindow::buildChangeList(QTreeWidgetItem* item) {
 void MainWindow::on_pushForceUpdateRepo_clicked() {
     m_ui->searchBoxRepo->clear();
     m_ui->comboFilterRepo->setCurrentIndex(0);
-    refresh_alpm(&m_handle, &m_alpm_err);
+    alpm::refresh_alpm(&m_handle, m_alpm_err);
     buildPackageLists(true);
 }
 

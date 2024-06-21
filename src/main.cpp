@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
     {
         alpm_errno_t alpm_err{};
         alpm_handle_t* handle = alpm_initialize("/", "/var/lib/pacman/", &alpm_err);
-        setup_alpm(handle);
+        alpm::setup_alpm(handle);
         size_t pkgcache_count{};
         auto* dbs = alpm_get_syncdbs(handle);
         for (alpm_list_t* i = dbs; i != nullptr; i = i->next) {
