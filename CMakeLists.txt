@@ -103,7 +103,7 @@ add_custom_command(
 ##
 ## Target
 ##
-qt_add_executable(${PROJECT_NAME}-bin
+qt_add_executable(${PROJECT_NAME}
     ${RESOURCES}
     images.qrc "${CMAKE_BINARY_DIR}/cachyospi_locale.qrc"
     src/ini.hpp
@@ -130,29 +130,21 @@ enable_sanitizers(project_options)
 
 include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR})
 
-target_link_libraries(${PROJECT_NAME}-bin PRIVATE project_warnings project_options Qt6::Widgets Threads::Threads spdlog::spdlog fmt::fmt ryml::ryml cpr::cpr PkgConfig::LIBALPM)
+target_link_libraries(${PROJECT_NAME} PRIVATE project_warnings project_options Qt6::Widgets Threads::Threads spdlog::spdlog fmt::fmt ryml::ryml cpr::cpr PkgConfig::LIBALPM)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-   target_link_libraries(${PROJECT_NAME}-bin PRIVATE range-v3::range-v3)
+   target_link_libraries(${PROJECT_NAME} PRIVATE range-v3::range-v3)
 endif()
 
 option(ENABLE_UNITY "Enable Unity builds of projects" OFF)
 if(ENABLE_UNITY)
    # Add for any project you want to apply unity builds for
-   set_target_properties(${PROJECT_NAME}-bin PROPERTIES UNITY_BUILD ON)
+   set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON)
 endif()
 
 install(
-   TARGETS ${PROJECT_NAME}-bin
+   TARGETS ${PROJECT_NAME}
    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-install(
-   PROGRAMS src/${PROJECT_NAME}
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-install(
-   PROGRAMS src/${PROJECT_NAME}-launcher
-   DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 install(
