@@ -103,7 +103,7 @@ void MainWindow::setup() {
     font.setStyleHint(QFont::Monospace);
     m_ui->outputBox->setFont(font);
 
-    m_fp_ver = VersionNumber(getVersion("flatpak").toStdString());
+    m_fp_ver = VersionNumber(this->get_package_version("flatpak"));
     m_user   = "--system ";
 
     m_arch     = PacmanCache::getArch();
@@ -1148,12 +1148,12 @@ void MainWindow::cleanup() {
     m_settings.setValue("geometry", saveGeometry());
 }
 
-// Get version of the program
-QString MainWindow::getVersion(const std::string_view& name) {
+// Get version of the package
+auto MainWindow::get_package_version(std::string_view name) noexcept -> std::string {
     if (auto pkg = get_package_view(m_handle, name)) {
-        return QString(pkg->pkgver.data());
+        return std::string{pkg->pkgver};
     }
-    return QString();
+    return {};
 }
 
 // Return true if all the packages listed are installed

@@ -147,7 +147,7 @@ class MainWindow : public QDialog {
     void updateInterface();
 
     static QString addSizes(const QString& arg1, const QString& arg2);
-    QString getVersion(const std::string_view& name);
+    auto get_package_version(std::string_view name) noexcept -> std::string;
     QStringList listFlatpaks(const QString& remote, const QString& type = "");
     QStringList listInstalled();
     QStringList listInstalledFlatpaks(const std::string_view& type = "");
