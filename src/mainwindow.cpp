@@ -188,8 +188,7 @@ bool MainWindow::uninstall(const QString& names) {
     m_ui->tabWidget->setTabText(m_ui->tabWidget->indexOf(m_ui->tabOutput), tr("Uninstalling packages..."));
     displayOutput();
 
-    bool success        = false;
-    const auto& cmd_str = [&is_ok, names = std::move(names.toStdString())]() -> std::string {
+    const auto& cmd_str = [&is_ok, names = names.toStdString()]() -> std::string {
         if (is_ok) {
             return fmt::format("pkexec pacman -R --noconfirm {}", std::move(names));
         }
@@ -438,25 +437,18 @@ void MainWindow::processFile(const std::string& group, const std::string& catego
     QString description;
     QString install_names;
     QString uninstall_names;
-    QStringList list;
 
-    auto* dbs = alpm_get_syncdbs(m_handle);
-    for (alpm_list_t* i = dbs; i != nullptr; i = i->next) {
-        auto* db  = reinterpret_cast<alpm_db_t*>(i->data);
-        auto* pkg = alpm_db_get_pkg(db, names[0].c_str());
-        if (pkg) {
-            description = alpm_pkg_get_desc(pkg);
-            break;
-        }
+    if (auto pkg = get_package_view(m_handle, names[0].c_str())) {
+        description = QString(pkg->desc.data());
     }
 
     install_names   = QString::fromStdString(fmt::format("{} {}", names[0], utils::make_multiline_range(names.begin() + 1, names.end(), " ")));
     uninstall_names = install_names;
 
-    list << QString::fromStdString(category) << QString::fromStdString(names[0])
-         << description << install_names << uninstall_names << QString::fromStdString(group);
-
-    m_popular_apps << list;
+    QStringList templist;
+    templist << QString::fromStdString(category) << QString::fromStdString(names[0])
+             << description << install_names << uninstall_names << QString::fromStdString(group);
+    m_popular_apps << templist;
 }
 
 // Reload and refresh interface
@@ -1158,7 +1150,10 @@ void MainWindow::cleanup() {
 
 // Get version of the program
 QString MainWindow::getVersion(const std::string_view& name) {
-    return m_cmd.getCmdOut(fmt::format("pacman -Si {} | grep 'Version' | {} | head -1", name, "awk '{print $3}'").c_str());
+    if (auto pkg = get_package_view(m_handle, name)) {
+        return QString(pkg->pkgver.data());
+    }
+    return QString();
 }
 
 // Return true if all the packages listed are installed

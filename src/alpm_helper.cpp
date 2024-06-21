@@ -711,3 +711,16 @@ int sync_trans(alpm_handle_t* handle, const std::vector<std::string>& targets, i
 
     return sync_prepare_execute(handle, conflict_msg);
 }
+
+auto get_package_view(alpm_handle_t* handle, std::string_view pkgname) noexcept -> std::optional<PackageView> {
+    auto* dbs = alpm_get_syncdbs(handle);
+    for (alpm_list_t* i = dbs; i != nullptr; i = i->next) {
+        auto* db  = reinterpret_cast<alpm_db_t*>(i->data);
+        auto* pkg = alpm_db_get_pkg(db, pkgname.data());
+        if (pkg == nullptr) {
+            continue;
+        }
+        return std::make_optional<PackageView>(PackageView{.pkgver = alpm_pkg_get_version(pkg), .desc = alpm_pkg_get_desc(pkg)});
+    }
+    return std::nullopt;
+}

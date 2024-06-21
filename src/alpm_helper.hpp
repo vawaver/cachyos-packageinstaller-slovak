@@ -19,8 +19,15 @@
 
 #include <alpm.h>
 
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
+
+struct PackageView {
+    std::string_view pkgver{};
+    std::string_view desc{};
+};
 
 void setup_alpm(alpm_handle_t* handle);
 void destroy_alpm(alpm_handle_t* handle);
@@ -33,5 +40,7 @@ std::string display_targets(alpm_handle_t* handle, bool verbosepkglists, std::st
 void add_targets_to_install(alpm_handle_t* handle, const std::vector<std::string>& vec);
 
 void add_targets_to_remove(alpm_handle_t* handle, const std::vector<std::string>& vec);
+
+auto get_package_view(alpm_handle_t* handle, std::string_view pkgname) noexcept -> std::optional<PackageView>;
 
 #endif  // ALPM_HELPER_HPP
