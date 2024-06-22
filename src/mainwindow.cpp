@@ -189,9 +189,9 @@ bool MainWindow::uninstall(const QString& names) {
 
     const auto& cmd_str = [&is_ok, names = names.toStdString()]() -> std::string {
         if (is_ok) {
-            return fmt::format("pkexec pacman -R --noconfirm {}", std::move(names));
+            return fmt::format("pkexec pacman -R --noconfirm {}", names);
         }
-        return fmt::format("pkexec pacman -R {}", std::move(names));
+        return fmt::format("pkexec pacman -R {}", names);
     }();
 
     return m_cmd.run(cmd_str.c_str());
@@ -294,7 +294,7 @@ QString MainWindow::addSizes(const QString& arg1, const QString& arg2) {
     // const auto& unit2   = splitted_str2[1].c_str();
 
     // calculate
-    const auto& bytes = convert(number1.toDouble(), unit1.toStdString().data()) + convert(number2.toDouble(), unit2.toStdString().data());
+    const auto& bytes = convert(number1.toDouble(), unit1.toStdString()) + convert(number2.toDouble(), unit2.toStdString());
 
     // presentation
     if (bytes < 1024)
@@ -1127,18 +1127,6 @@ void MainWindow::clearUi() {
     blockSignals(false);
 }
 
-// Copy QTreeWidgets
-void MainWindow::copyTree(QTreeWidget* from, QTreeWidget* to) const {
-    spdlog::debug("+++ {} +++", __PRETTY_FUNCTION__);
-    to->clear();
-    QTreeWidgetItem* item;
-
-    for (QTreeWidgetItemIterator it(from); *it; ++it) {
-        item = (*it)->clone();
-        to->addTopLevelItem(item);
-    }
-}
-
 // Cleanup environment when window is closed
 void MainWindow::cleanup() {
     spdlog::debug("+++ {} +++", __PRETTY_FUNCTION__);
@@ -1930,12 +1918,11 @@ void MainWindow::on_pushUpgradeAll_clicked() {
             names += (*it)->text(TreeCol::Name) + " ";
     }
 
+    buildPackageLists();
     if (install(names)) {
-        buildPackageLists();
         QMessageBox::information(this, tr("Done"), tr("Processing finished successfully."));
         m_ui->tabWidget->setCurrentWidget(m_tree->parentWidget());
     } else {
-        buildPackageLists();
         QMessageBox::critical(this, tr("Error"), tr("Problem detected while installing, please inspect the console output."));
     }
 

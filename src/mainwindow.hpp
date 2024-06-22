@@ -126,7 +126,6 @@ class MainWindow : public QDialog {
     void cancelDownload();
     void centerWindow();
     void clearUi();
-    void copyTree(QTreeWidget*, QTreeWidget*) const;
     void displayFilteredFP(QStringList list, bool raw = false);
     void displayFlatpaks(bool force_update = false);
     void displayPackages();
