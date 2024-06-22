@@ -106,7 +106,6 @@ void MainWindow::setup() {
     m_fp_ver = VersionNumber(this->get_package_version("flatpak"));
     m_user   = "--system ";
 
-    m_arch     = PacmanCache::getArch();
     m_ver_name = "nil";
 
     connect(qApp, &QApplication::aboutToQuit, this, &MainWindow::cleanup, Qt::QueuedConnection);
@@ -1204,15 +1203,7 @@ QStringList MainWindow::listFlatpaks(const QString& remote, const QString& type)
     QStringList list;
 
     // need to specify arch for older version (flatpak takes different format than dpkg)
-    QString arch_fp;
-    if (m_arch == QStringLiteral("amd64"))
-        arch_fp = "--arch=x86_64 ";
-    else if (m_arch == QStringLiteral("i386"))
-        arch_fp = "--arch=i386 ";
-    else if (m_arch == QStringLiteral("armhf"))
-        arch_fp = "--arch=arm ";
-    else
-        return {};
+    const auto arch_fp = QStringLiteral("--arch=x86_64 ");
 
     disconnect(m_conn);
     if (m_fp_ver < VersionNumber("1.0.1")) {

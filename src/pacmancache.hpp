@@ -17,8 +17,6 @@
 #ifndef PACMANCACHE_HPP
 #define PACMANCACHE_HPP
 
-#include "versionnumber.hpp"
-
 #include <alpm.h>
 
 #include <map>
@@ -29,12 +27,10 @@ class PacmanCache {
  public:
     explicit PacmanCache(alpm_handle_t* handle) : m_handle(handle) { refresh_list(); }
 
-    void refresh_list();
+    void refresh_list() noexcept;
 
-    [[nodiscard]] const std::map<QString, QStringList>& get_candidates() const { return m_candidates; }
-    [[nodiscard]] const QStringList& get_upgrade_candidates() const { return m_upd_candidates; }
-
-    static QStringView getArch();
+    [[nodiscard]] const auto& get_candidates() const noexcept { return m_candidates; }
+    [[nodiscard]] const auto& get_upgrade_candidates() const noexcept { return m_upd_candidates; }
 
  private:
     QStringList m_upd_candidates;

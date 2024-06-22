@@ -15,22 +15,23 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 #include "pacmancache.hpp"
-#include "cmd.hpp"
+#include "versionnumber.hpp"
 
-#include <unordered_map>
+namespace {
 
-static QStringList get_upgrade_packages(alpm_handle_t* handle) {
+auto get_upgrade_packages(alpm_handle_t* handle) noexcept -> QStringList {
     if (handle == nullptr)
         return {};
 
     QStringList upgrade_packages;
 
     auto* localdb = alpm_get_localdb(handle);
+    auto* syncdbs = alpm_get_syncdbs(handle);
     for (alpm_list_t* i = alpm_db_get_pkgcache(localdb); i != nullptr; i = i->next) {
         auto* lpkg           = reinterpret_cast<alpm_pkg_t*>(i->data);
         const char* pkg_name = alpm_pkg_get_name(lpkg);
 
-        if (alpm_sync_get_new_version(lpkg, alpm_get_syncdbs(handle)) == nullptr) {
+        if (alpm_sync_get_new_version(lpkg, syncdbs) == nullptr) {
             continue;
         }
 
@@ -40,7 +41,9 @@ static QStringList get_upgrade_packages(alpm_handle_t* handle) {
     return upgrade_packages;
 }
 
-void PacmanCache::refresh_list() {
+}  // namespace
+
+void PacmanCache::refresh_list() noexcept {
     QStringList package_list;
     QStringList version_list;
     QStringList description_list;
@@ -69,16 +72,4 @@ void PacmanCache::refresh_list() {
             continue;
         m_candidates[package_list.at(i)] = (QStringList() << version_list.at(i) << description_list.at(i));
     }
-}
-
-QStringView PacmanCache::getArch() {
-    // Pair of arch names returned by "uname" and corresponding DEB_BUILD_ARCH formats
-    static const std::unordered_map<QString, QString> arch_names{
-        {"x86_64", "amd64"},
-        {"x86_64_v3", "amd64"},
-        {"i686", "i386"},
-        {"armv7l", "armhf"}};
-
-    Cmd cmd;
-    return arch_names.at(cmd.getCmdOut("uname -m", true));
 }
