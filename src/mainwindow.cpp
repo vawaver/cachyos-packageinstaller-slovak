@@ -171,8 +171,10 @@ void MainWindow::setup() {
     }
 
     // hide flatpak
-    m_ui->tabWidget->setTabEnabled(Tab::Flatpak, false);
-    m_ui->tabWidget->setTabVisible(Tab::Flatpak, false);
+    if (!m_settings.contains("showFlatpak") || !m_settings.value("showFlatpak").toBool()) {
+        m_ui->tabWidget->setTabEnabled(Tab::Flatpak, false);
+        m_ui->tabWidget->setTabVisible(Tab::Flatpak, false);
+    }
 }
 
 // Uninstall listed packages
