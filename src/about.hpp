@@ -5,8 +5,8 @@
 
 namespace about {
 
-void displayDoc(const QString& url);
-void displayAboutMsgBox(const QString& title, const QString& message, const QString& licence_url);
+void display_doc(const QString& url) noexcept;
+void display_about_msgbox(const QString& title, const QString& message, const QString& licence_url) noexcept;
 
 }  // namespace about
 

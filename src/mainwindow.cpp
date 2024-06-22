@@ -1511,13 +1511,14 @@ void MainWindow::on_pushInstall_clicked() {
 
 // About button clicked
 void MainWindow::on_pushAbout_clicked() {
-    about::displayAboutMsgBox(tr("About %1").arg(this->windowTitle()), "<p align=\"center\"><b><h2>" + this->windowTitle() + "</h2></b></p><p align=\"center\">" + tr("Version: ") + VERSION + "</p><p align=\"center\"><h3>" + tr("Package Installer for CachyOS") + R"(</h3></p><p align="center"><a href="http://cachyos.org">http://cachyos.org</a><br /></p><p align="center">)" + tr("Copyright (c) CachyOS") + "<br /><br /></p>",
-        "file:///usr/share/doc/cachyos-packageinstaller/license.html");
+    const auto& msgbox_title = tr("About %1").arg(this->windowTitle());
+    const auto& msgbox_body  = "<p align=\"center\"><b><h2>" + this->windowTitle() + "</h2></b></p><p align=\"center\">" + tr("Version: ") + VERSION + "</p><p align=\"center\"><h3>" + tr("Package Installer for CachyOS") + R"(</h3></p><p align="center"><a href="http://cachyos.org">http://cachyos.org</a><br /></p><p align="center">)" + tr("Copyright (c) CachyOS") + "<br /><br /></p>";
+    about::display_about_msgbox(msgbox_title, msgbox_body,
+        QStringLiteral("file:///usr/share/doc/cachyos-packageinstaller/license.html"));
 }
 // Help button clicked
 void MainWindow::on_pushHelp_clicked() {
-    QString url = "file:///usr/share/doc/cachyos-packageinstaller/cachyos-pi.html";
-    about::displayDoc(url);
+    about::display_doc(QStringLiteral("file:///usr/share/doc/cachyos-packageinstaller/cachyos-pi.html"));
 }
 
 // Resize columns when expanding

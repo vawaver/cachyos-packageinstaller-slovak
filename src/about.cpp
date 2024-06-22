@@ -9,20 +9,20 @@
 namespace about {
 
 // display doc as normal user when run as root
-void displayDoc(const QString& url) {
+void display_doc(const QString& url) noexcept {
     QDesktopServices::openUrl(QUrl(url));
 }
 
-void displayAboutMsgBox(const QString& title, const QString& message, const QString& licence_url) {
-    QMessageBox msgBox(QMessageBox::NoIcon, title, message);
-    auto* btnLicense = msgBox.addButton(QObject::tr("License"), QMessageBox::HelpRole);
-    auto* btnCancel  = msgBox.addButton(QObject::tr("Cancel"), QMessageBox::NoRole);
-    btnCancel->setIcon(QIcon::fromTheme("window-close"));
+void display_about_msgbox(const QString& title, const QString& message, const QString& licence_url) noexcept {
+    QMessageBox msg_box(QMessageBox::NoIcon, title, message);
+    auto* license_btn = msg_box.addButton(QObject::tr("License"), QMessageBox::HelpRole);
+    auto* cancel_btn  = msg_box.addButton(QObject::tr("Cancel"), QMessageBox::NoRole);
+    cancel_btn->setIcon(QIcon::fromTheme("window-close"));
 
-    msgBox.exec();
+    msg_box.exec();
 
-    if (msgBox.clickedButton() == btnLicense) {
-        displayDoc(licence_url);
+    if (msg_box.clickedButton() == license_btn) {
+        display_doc(licence_url);
     }
 }
 
