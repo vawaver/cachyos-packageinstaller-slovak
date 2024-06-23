@@ -205,7 +205,7 @@
     <message>
         <location filename="../src/mainwindow.ui" line="679"/>
         <source>Total items </source>
-        <translation>Položky celkem</translation>
+        <translation>Položky celkem </translation>
     </message>
     <message>
         <location filename="../src/mainwindow.ui" line="693"/>
@@ -263,7 +263,7 @@
     <message>
         <location filename="../src/mainwindow.ui" line="950"/>
         <source>Display help </source>
-        <translation>Zobrazit pomoc</translation>
+        <translation>Zobrazit pomoc </translation>
     </message>
     <message>
         <location filename="../src/mainwindow.ui" line="953"/>
@@ -390,7 +390,7 @@
     <message>
         <location filename="../src/mainwindow.cpp" line="688"/>
         <source>Latest version </source>
-        <translation>Nejnovější verze</translation>
+        <translation>Nejnovější verze </translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="688"/>
@@ -416,7 +416,7 @@
     <message>
         <location filename="../src/mainwindow.cpp" line="811"/>
         <source>Do not show this message again</source>
-        <translation>Tuto zprávu už víc nezobrazovat.</translation>
+        <translation>Tuto zprávu už víc nezobrazovat</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="903"/>
@@ -492,7 +492,7 @@
         <location filename="../src/mainwindow.cpp" line="1941"/>
         <location filename="../src/mainwindow.cpp" line="1967"/>
         <source>Problem detected while installing, please inspect the console output.</source>
-        <translation>Zjištěn problém při instalaci, prosím prověřte výstup v konzoli</translation>
+        <translation>Zjištěn problém při instalaci, prosím prověřte výstup v konzoli.</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1482"/>
@@ -529,7 +529,7 @@
         <location filename="../src/mainwindow.cpp" line="1580"/>
         <location filename="../src/mainwindow.cpp" line="2078"/>
         <source>We encountered a problem uninstalling the program</source>
-        <translation>Narazili jsme na problém při odinstalaci programu.</translation>
+        <translation>Narazili jsme na problém při odinstalaci programu</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1645"/>
@@ -552,7 +552,7 @@ Ok pro jeho instalaci?</translation>
     <message>
         <location filename="../src/mainwindow.cpp" line="1667"/>
         <source>Flathub remote failed</source>
-        <translation>Selhalo připojení k Flathubu.</translation>
+        <translation>Selhalo připojení k Flathubu</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1667"/>
@@ -567,7 +567,7 @@ Ok pro jeho instalaci?</translation>
     <message>
         <location filename="../src/mainwindow.cpp" line="1680"/>
         <source>You might need to logout/login to see installed items in the menu</source>
-        <translation>Možná sa budete muset odhlásit a znova přihlásit, aby jste viděli nainstalované položky v nabídce.</translation>
+        <translation>Možná sa budete muset odhlásit a znova přihlásit, aby jste viděli nainstalované položky v nabídce</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.cpp" line="1827"/>
@@ -713,7 +713,7 @@ Ujistite se, že důkladne zkontrolujete seznam balíčků, které mají být od
     <message>
         <location filename="../src/main.cpp" line="153"/>
         <source>Instance of the program is already running! Please close it first</source>
-        <translation>Instalace programu již běží! Prosím, nejprve ji ukončite.</translation>
+        <translation>Instalace programu již běží! Prosím, nejprve ji ukončite</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="171"/>
@@ -722,7 +722,7 @@ Please run `pacman -Sy` to update DB!
 This is needed for the app to work properly</source>
         <translation>Nenašla sa žádné databáze!
 Prosím, spusťte `pacman -Sy` pro aktualizaci databáze!
-Je to potřebné pro správne fungování aplikacie.</translation>
+Je to potřebné pro správne fungování aplikacie</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="181"/>
@@ -737,11 +737,11 @@ Je to potřebné pro správne fungování aplikacie.</translation>
     <message>
         <location filename="../src/main.cpp" line="188"/>
         <source>Please don&apos;t run that application as root user!</source>
-        <translation type="unfinished"></translation>
+        <translation>Prosím nespouštějte tuto aplikaci jako superuživatel!</translation>
     </message>
     <message>
         <source>Please run that application as root user!</source>
-        <translation type="vanished">Spusťte tuto aplikáciu jako root!</translation>
+        <translation type="vanished">Spusťte tuto aplikaci jako root!</translation>
     </message>
     <message>
         <location filename="../src/main.cpp" line="196"/>
@@ -751,7 +751,7 @@ Je to potřebné pro správne fungování aplikacie.</translation>
     <message>
         <location filename="../src/main.cpp" line="197"/>
         <source>Another package management application (like pamac or pacman), is already running. Please close that application first</source>
-        <translation>Další aplikace na správu balíčků (jako pamac alebo pacman) již běží. Prosím, nejdřív ukončite tuto aplikaci.</translation>
+        <translation>Další aplikace na správu balíčků (jako pamac nebo pacman) již běží. Prosím, nejdřív ukončite tuto aplikaci</translation>
     </message>
 </context>
 </TS>
