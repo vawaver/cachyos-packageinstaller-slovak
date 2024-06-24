@@ -18,7 +18,7 @@
         <location filename="../src/mainwindow.ui" line="83"/>
         <location filename="../src/mainwindow.cpp" line="118"/>
         <source>Package</source>
-        <translation>Balík</translation>
+        <translation>Balíček</translation>
     </message>
     <message>
         <location filename="../src/mainwindow.ui" line="88"/>
