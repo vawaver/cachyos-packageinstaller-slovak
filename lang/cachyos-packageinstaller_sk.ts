@@ -737,7 +737,7 @@ Je to potrebné pre správne fungovanie aplikácie.</translation>
     <message>
         <location filename="../src/main.cpp" line="188"/>
         <source>Please don&apos;t run that application as root user!</source>
-        <translation type="unfinished"></translation>
+        <translation>Prosím nespúšťajte túto aplikáciu ako root!</translation>
     </message>
     <message>
         <source>Please run that application as root user!</source>
